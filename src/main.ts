@@ -1,17 +1,19 @@
-import { Plugin, Notice } from "obsidian";
+import { Plugin, Notice, CanvasView } from "obsidian";
 import { CanvasManager } from "./canvas";
-import { NodeRenderer } from "./ui";
+import { NodeRenderer, CanvasToolbar } from "./ui";
 import { WorkflowStorage } from "./storage";
 import { WorkflowExecutor } from "./execution";
 
 interface PluginSettings {
   enableMCP: boolean;
   autoSaveWorkflows: boolean;
+  toolbarVisible: boolean;
 }
 
 const DEFAULT_SETTINGS: PluginSettings = {
   enableMCP: true,
-  autoSaveWorkflows: true
+  autoSaveWorkflows: true,
+  toolbarVisible: true
 };
 
 export default class VisualAutomationPlugin extends Plugin {
@@ -20,6 +22,7 @@ export default class VisualAutomationPlugin extends Plugin {
   nodeRenderer!: NodeRenderer;
   workflowStorage!: WorkflowStorage;
   executor!: WorkflowExecutor;
+  toolbar!: CanvasToolbar;
 
   async onload() {
     await this.loadSettings();
@@ -34,7 +37,21 @@ export default class VisualAutomationPlugin extends Plugin {
     this.nodeRenderer.styleNodeType("condition", { bg: "#e8f5e9", border: "#388e3c", accent: "#1b5e20" });
     this.nodeRenderer.styleNodeType("action", { bg: "#fff3e0", border: "#f57c00", accent: "#e65100" });
 
-    // UI Commands
+    // Toolbar
+    this.toolbar = new CanvasToolbar(this.app, this.canvasManager, this.nodeRenderer, this);
+
+    // Show toolbar in canvas views
+    this.registerEvent(
+      this.app.workspace.on("visible-view-change", (oldView, newView) => {
+        if (newView instanceof CanvasView && this.settings.toolbarVisible) {
+          this.toolbar.createToolbar();
+        } else {
+          this.toolbar.removeToolbar();
+        }
+      })
+    );
+
+    // UI Commands (fallback for users who prefer command palette)
     this.addCommand({
       id: "add-trigger-node",
       name: "Add Trigger Node",
@@ -74,6 +91,16 @@ export default class VisualAutomationPlugin extends Plugin {
       callback: () => this.executeWorkflow()
     });
 
+    this.addCommand({
+      id: "toggle-toolbar",
+      name: "Toggle Toolbar",
+      callback: async () => {
+        this.settings.toolbarVisible = !this.settings.toolbarVisible;
+        await this.saveSettings();
+        new Notice(`Toolbar ${this.settings.toolbarVisible ? "showed" : "hidden"}`);
+      }
+    });
+
     console.log("Visual Automation plugin loaded");
   }
 
@@ -85,9 +112,8 @@ export default class VisualAutomationPlugin extends Plugin {
 
   private getCanvasCenter(): { x: number; y: number } | null {
     const view = this.app.workspace.getActiveViewComponent();
-    if (view && "canvas" in view) {
-      const canvas = (view as any).canvas;
-      return canvas ? { x: canvas.width / 2, y: canvas.height / 2 } : null;
+    if (view instanceof CanvasView) {
+      return { x: view.canvas.width / 2, y: view.canvas.height / 2 };
     }
     return null;
   }
@@ -95,12 +121,9 @@ export default class VisualAutomationPlugin extends Plugin {
   private async executeWorkflow() {
     const nodes = this.canvasManager.getWorkflowNodes();
     const connections: any[] = [];
-    // collect connections from canvas
-    if (this.canvasManager.getCanvas()) {
-      const canvas = this.canvasManager.getCanvas();
-      if (canvas && canvas.links) {
-        canvas.links.forEach(l => connections.push({ sourceId: l.source, targetId: l.target }));
-      }
+    const canvas = this.canvasManager.getCanvas();
+    if (canvas && canvas.links) {
+      canvas.links.forEach(l => connections.push({ sourceId: l.source, targetId: l.target }));
     }
 
     if (nodes.length < 2) {
