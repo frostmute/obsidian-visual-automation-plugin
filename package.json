@@ -1,0 +1,17 @@
+{
+  "name": "obsidian-visual-automation-plugin",
+  "version": "1.0.0",
+  "description": "Build no-code automations on Obsidian Canvas",
+  "main": "main.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": ["obsidian", "plugin", "automation", "canvas", "workflow"],
+  "author": "Frost",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "typescript": "^5.4.2"
+  },
+  "dependencies": {}
+}
