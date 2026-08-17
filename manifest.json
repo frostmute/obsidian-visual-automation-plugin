@@ -1,0 +1,11 @@
+{
+  "id": "com.frost.visual-automation",
+  "name": "Visual Automation",
+  "version": "1.0.0",
+  "minAppVersion": "1.13.0",
+  "description": "Build no-code automations on Obsidian Canvas",
+  "author": "Frost",
+  "authorUrl": "https://github.com/frost",
+  "fundingUrl": "https://github.com/sponsors/frost",
+  "isDesktopOnly": false
+}
