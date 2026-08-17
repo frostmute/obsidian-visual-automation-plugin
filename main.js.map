@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/main.ts"],
-  "sourcesContent": ["import { Plugin, Notice } from \"obsidian\";\n\ninterface PluginSettings {\n  enableMCP: boolean;\n  autoSaveWorkflows: boolean;\n}\n\nconst DEFAULT_SETTINGS: PluginSettings = {\n  enableMCP: true,\n  autoSaveWorkflows: true\n};\n\nexport default class VisualAutomationPlugin extends Plugin {\n  settings: PluginSettings;\n\n  async onload() {\n    await this.loadSettings();\n\n    this.addCommand({\n      id: \"create-automation\",\n      name: \"Create New Automation\",\n      callback: () => {\n        new Notice(\"Automation editor opened\");\n      }\n    });\n\n    console.log(\"Visual Automation plugin loaded\");\n  }\n\n  async loadSettings() {\n    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());\n  }\n\n  async saveSettings() {\n    await this.saveData(this.settings);\n  }\n}"],
-  "mappings": ";;;;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,sBAA+B;AAO/B,IAAM,mBAAmC;AAAA,EACvC,WAAW;AAAA,EACX,mBAAmB;AACrB;AAEA,IAAqB,yBAArB,cAAoD,uBAAO;AAAA,EAGzD,MAAM,SAAS;AACb,UAAM,KAAK,aAAa;AAExB,SAAK,WAAW;AAAA,MACd,IAAI;AAAA,MACJ,MAAM;AAAA,MACN,UAAU,MAAM;AACd,YAAI,uBAAO,0BAA0B;AAAA,MACvC;AAAA,IACF,CAAC;AAED,YAAQ,IAAI,iCAAiC;AAAA,EAC/C;AAAA,EAEA,MAAM,eAAe;AACnB,SAAK,WAAW,OAAO,OAAO,CAAC,GAAG,kBAAkB,MAAM,KAAK,SAAS,CAAC;AAAA,EAC3E;AAAA,EAEA,MAAM,eAAe;AACnB,UAAM,KAAK,SAAS,KAAK,QAAQ;AAAA,EACnC;AACF;",
-  "names": []
-}
