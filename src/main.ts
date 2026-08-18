@@ -27,10 +27,10 @@ export default class VisualAutomationPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    this.canvasManager = new CanvasManager(this.app);
-    this.nodeRenderer = new NodeRenderer();
     this.workflowStorage = new WorkflowStorage(this.app, "workflows");
-    this.executor = new WorkflowExecutor(this.app);
+    this.canvasManager = new CanvasManager(this.app, this.workflowStorage);
+    this.nodeRenderer = new NodeRenderer();
+    this.executor = new WorkflowExecutor(this.app, this.workflowStorage);
 
     // Register node style types
     this.nodeRenderer.styleNodeType("trigger", { bg: "#e3f2fd", border: "#1976d2", accent: "#0d47a1" });

@@ -7,70 +7,55 @@ export interface WorkflowData {
   nodes: NodeConfig[];
   connections: WorkflowConnection[];
   createdAt: string;
+  version: string;
+  // New execution history field
+  executionHistory: ExecutionRecord[];
+}
+
+export interface ExecutionRecord {
+  id: string;
+  timestamp: string;
+  nodesExecuted: string[];
+  output: string[];
+  errors: string[];
+  durationMs: number;
 }
 
 export class WorkflowStorage {
-  private app: App;
-  private workflowsFolder: string;
-
-  constructor(app: App, workflowsFolder = "workflows") {
-    this.app = app;
-    this.workflowsFolder = workflowsFolder;
-  }
-
-  async ensureFolderExists() {
-    const folder = this.app.vault.getFolderMetadata(this.workflowsFolder);
-    if (!folder) {
-      await this.app.vault.createFolder(this.workflowsFolder);
-    }
-  }
-
-  async saveWorkflow(workflow: WorkflowData): Promise<TFile> {
-    await this.ensureFolderExists();
-    const path = `${this.workflowsFolder}/${workflow.id}.json`;
-    await this.app.vault.write(path, JSON.stringify(workflow, null, 2));
-    return this.app.vault.getAbstractFileByPath(path) as TFile;
-  }
-
-  async loadWorkflow(id: string): Promise<WorkflowData | null> {
-    const path = `${this.workflowsFolder}/${id}.json`;
+  // ... existing code ...
+  
+  // New method to record execution history
+  async recordExecutionHistory(workflowId: string, executionRecord: ExecutionRecord): Promise<void> {
+    const path = `${this.workflowsFolder}/${workflowId}.json`;
     const file = this.app.vault.getAbstractFileByPath(path);
-    if (!(file instanceof TFile)) return null;
+    
+    if (!(file instanceof TFile)) {
+      new Notice("Workflow file not found");
+      return;
+    }
+    
     const content = await this.app.vault.read(file);
-    return JSON.parse(content) as WorkflowData;
+    const workflowData = JSON.parse(content) as WorkflowData;
+    
+    // Add new execution record
+    workflowData.executionHistory.push(executionRecord);
+    
+    // Save updated workflow
+    await this.app.vault.write(path, JSON.stringify(workflowData, null, 2));
   }
-
-  async listWorkflows(): Promise<WorkflowData[]> {
-    const folder = this.app.vault.getFolderMetadata(this.workflowsFolder);
-    if (!folder) return [];
-    const files = this.app.vault.getFiles()
-      .filter(f => f.path.startsWith(this.workflowsFolder + "/") && f.extension === "json");
-    const workflows: WorkflowData[] = [];
-    for (const file of files) {
-      const content = await this.app.vault.read(file);
-      workflows.push(JSON.parse(content) as WorkflowData);
-    }
-    return workflows;
-  }
-
-  async deleteWorkflow(id: string): Promise<void> {
-    const path = `${this.workflowsFolder}/${id}.json`;
+  
+  // New method to get execution history
+  async getExecutionHistory(workflowId: string): Promise<ExecutionRecord[]> {
+    const path = `${this.workflowsFolder}/${workflowId}.json`;
     const file = this.app.vault.getAbstractFileByPath(path);
-    if (file instanceof TFile) {
-      await this.app.vault.delete(file);
+    
+    if (!(file instanceof TFile)) {
+      return [];
     }
-  }
-
-  async exportWorkflow(workflow: WorkflowData): Promise<void> {
-    await this.saveWorkflow(workflow);
-    new Notice(`Workflow exported: ${workflow.name}`);
-  }
-
-  async importWorkflow(id: string): Promise<WorkflowData | null> {
-    const workflow = await this.loadWorkflow(id);
-    if (workflow) {
-      new Notice(`Workflow imported: ${workflow.name}`);
-    }
-    return workflow;
+    
+    const content = await this.app.vault.read(file);
+    const workflowData = JSON.parse(content) as WorkflowData;
+    
+    return workflowData.executionHistory || [];
   }
 }

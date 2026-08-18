@@ -1,24 +1,25 @@
-import { App, Canvas, CanvasView, TFile, Notice } from "obsidian";
+import { App, Canvas, CanvasView, TFile } from "obsidian";
 import { CanvasNodeEx, NodeConfig, WorkflowConnection } from "./CanvasNode";
+import { WorkflowStorage, WorkflowData } from "../storage";
 
 export class CanvasManager {
   private app: App;
   private canvas?: Canvas;
+  private workflowStorage: WorkflowStorage;
 
-  constructor(app: App) {
+  constructor(app: App, workflowStorage?: WorkflowStorage) {
     this.app = app;
+    this.workflowStorage = workflowStorage ?? new WorkflowStorage(app, "workflows");
     this.init();
   }
 
   private init() {
-    this.app.workspace.on("visible-view-change", this.onViewChange);
+    this.app.workspace.on("visible-view-change", (oldView, newView) => {
+      if (newView instanceof CanvasView) {
+        this.canvas = newView.canvas;
+      }
+    });
   }
-
-  private onViewChange = (oldView: unknown, newView: unknown) => {
-    if (newView instanceof CanvasView) {
-      this.canvas = newView.canvas;
-    }
-  };
 
   getCanvas(): Canvas | undefined {
     return this.canvas;
@@ -52,7 +53,7 @@ export class CanvasManager {
     const link = this.canvas.addLink({
       source: sourceId,
       target: targetId,
-    } as never) as CanvasLink;
+    } as any) as any;
     if (!link) return null;
     return { sourceId, targetId, type: "direct" };
   }
@@ -68,7 +69,41 @@ export class CanvasManager {
     return Object.values(this.canvas.nodes).filter(n => (n as CanvasNodeEx).nodeType) as CanvasNodeEx[];
   }
 
-  saveWorkflow(vault: TFile) {
-    // TODO: persist workflow to file
+  getAllConnections(): WorkflowConnection[] {
+    if (!this.canvas) return [];
+    return this.canvas.links.map(link => ({
+      sourceId: link.source,
+      targetId: link.target,
+      type: "direct"
+    }));
+  }
+
+  saveWorkflow(): Promise<TFile> {
+    const nodes = this.getWorkflowNodes();
+    const connections = this.getAllConnections();
+    const workflowData: WorkflowData = {
+      id: this.workflowStorage.generateId(),
+      name: "New Workflow",
+      nodes: nodes.map(n => n.config),
+      connections,
+      createdAt: new Date().toISOString()
+    };
+    return this.workflowStorage.saveWorkflow(workflowData);
+  }
+
+  async loadLatestWorkflow(): Promise<WorkflowData | null> {
+    return await this.workflowStorage.getLatestWorkflow();
+  }
+
+  async loadWorkflow(id: string): Promise<WorkflowData | null> {
+    return await this.workflowStorage.loadWorkflow(id);
+  }
+
+  async listWorkflows(): Promise<WorkflowData[]> {
+    return await this.workflowStorage.listWorkflows();
+  }
+
+  async deleteWorkflow(id: string): Promise<void> {
+    return await this.workflowStorage.deleteWorkflow(id);
   }
 }
